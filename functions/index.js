@@ -48,7 +48,7 @@ const messaging = admin.messaging();
 //     });
 // })
 
-exports.scheduledFunction = functions.pubsub.schedule('* * * * *').onRun(async (context) => {
+exports.scheduledFunction = functions.pubsub.schedule('0 */3 * * *').onRun(async (context) => {
     const userSnapshot = await admin.database().ref('/Users').once('value');
 
     var userIds = [];
@@ -78,13 +78,16 @@ exports.scheduledFunction = functions.pubsub.schedule('* * * * *').onRun(async (
                         okrSnapshot.forEach((okr) => {
                             const okrGoalId = okr.key;
                             const dueDate = okr.child('dueDate').val();
+                            const isDone = okr.child('done').val();
+                            console.log('typeof isDone: ' + typeof(isDone));
+                            console.log('isDone: ' + isDone);
                             var dueDateMoment = moment(dueDate, "YYYY/MM/DD");
                             console.log('dueDateMoment: ' + dueDateMoment);
                             var notificationLastSent = okr.child('notificationLastSent').val();
                             console.log('okrGoalId: ' + okrGoalId + ' notificationLastSent: ' + notificationLastSent);
                             
                             var diff = currentDate.diff(dueDateMoment, 'days');
-                            if (diff > -1) {
+                            if (diff > -1 && isDone != true) {
                                 var shouldSendNotification = true;
                                 if (notificationLastSent != null && notificationLastSent != 'n/a') {
                                     console.log('currentDate: ' + currentDate.format("YYYY/MM/DD HH:mm:ss") + ' notificationLastSent: ' + notificationLastSent);
@@ -104,16 +107,16 @@ exports.scheduledFunction = functions.pubsub.schedule('* * * * *').onRun(async (
                                         payload = {
                                             data: {
                                                 title: "You are late!",
-                                                body: "Please notice that you are late!"
-                                                // body: "Due date is coming up for goal " + `"` + goalName + `"`
+                                                // body: "Please notice that you are late!"
+                                                body: "Due date is coming up for goal " + `"` + goalName + `"`
                                             }
                                         };
                                     } else {
                                         payload = {
                                             data: {
                                                 title: "Your due date for a task is coming up!",
-                                                body: "Due date is coming up!"
-                                                // body: "Due date is coming up for goal " + `"` + goalName + `"`
+                                                // body: "Due date is coming up!"
+                                                body: "Due date is coming up for goal " + `"` + goalName + `"`
                                             }
                                         };
                                     }
@@ -121,6 +124,7 @@ exports.scheduledFunction = functions.pubsub.schedule('* * * * *').onRun(async (
                                     messaging.sendToDevice(fcmToken, payload).then(function (response) {
                                         // See the MessagingTopicResponse reference documentation for the
                                         // contents of response.
+                                        console.log('sent message to this token: ' + fcmToken);
                                         console.log("Successfully sent message:", response);
                                         moment.defaultFormat = "YYYY/MM/DD HH/mm";
                                         var currentDateTime = moment();
