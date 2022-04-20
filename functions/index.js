@@ -77,6 +77,7 @@ exports.scheduledFunction = functions.pubsub.schedule('0 */3 * * *').onRun(async
                     okrSnapshotPromise.then((okrSnapshot) => {
                         okrSnapshot.forEach((okr) => {
                             const okrGoalId = okr.key;
+                            const okrGoalName = okr.child('goal').val();
                             const dueDate = okr.child('dueDate').val();
                             const isDone = okr.child('done').val();
                             console.log('typeof isDone: ' + typeof(isDone));
@@ -108,20 +109,22 @@ exports.scheduledFunction = functions.pubsub.schedule('0 */3 * * *').onRun(async
                                             data: {
                                                 title: "You are late!",
                                                 // body: "Please notice that you are late!"
-                                                body: "Due date is coming up for goal " + `"` + goalName + `"`
-                                            }
+                                                body: "Due date is coming up for goal " + `"` + goalName + `"` + ", okr goal " + `"` + okrGoalName + `"`
+                                            },
+                                            token: fcmToken
                                         };
                                     } else {
                                         payload = {
                                             data: {
                                                 title: "Your due date for a task is coming up!",
                                                 // body: "Due date is coming up!"
-                                                body: "Due date is coming up for goal " + `"` + goalName + `"`
-                                            }
+                                                body: "Due date is coming up for goal " + `"` + goalName + `"` + ", okr goal " + `"` + okrGoalName + `"`
+                                            },
+                                            token: fcmToken
                                         };
                                     }
                             
-                                    messaging.sendToDevice(fcmToken, payload).then(function (response) {
+                                    messaging.send(payload).then(function (response) {
                                         // See the MessagingTopicResponse reference documentation for the
                                         // contents of response.
                                         console.log('sent message to this token: ' + fcmToken);
