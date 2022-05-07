@@ -3,64 +3,17 @@ const admin = require('firebase-admin');
 const moment = require('moment');
 moment.defaultFormat = "YYYY/MM/DD HH:mm:ss";
 admin.initializeApp();
-// admin.initializeApp({
-//     credential: admin.credential.cert(
-//         "C:/Users/Edvinas/Desktop/eee/Mokslai/Universitetas/BAIGIAMASIS DARBAS/Cloud functions/functions/goal-tracking-ccad5-32a5cbbcebd8.json"
-//     ),
-//     databaseURL: "http://localhost:9000/?ns=goal-tracking-ccad5-default-rtdb"
-// });
 const messaging = admin.messaging();
-
-// exports.sendListenerPushNotification = functions.database.ref('Users/{userId}/').onWrite((data, context) => {
-// 	const userId = context.params.userId;
-//     const FCMToken = admin.database().ref(`Users/${userId}/fcmToken`).once('value');
-//     // console.log('FCMToken: ' + FCMToken);
-//     console.log('userId: ' + userId);
-
-//     return FCMToken.then(result => {
-
-//         var token_id = result.val();
-//         // var tokens = ['fNqyWPD8TCerSPwKGm6kR2:APA91bHELVE083YIUw3-xs4LMoWf_WymQd1KtW7zvah0zAzcls_kMYALPwaVajMpzBkw13HbJSD44-SOWZK_PeQH_SLsNNOwoZLN3GAXszjQzGH7BrE5dlOmtVAB2U7Bb9E-v1hyV0Ca', 'f4HbZWVmTLuhlaNrUbdHzf:APA91bGMWUbNQbhUYhFviHHjR6_yCDz4IFCAUbTuGxCE-w_T0MtbvKyq7nEr7KRnaMl_agW_Y6sZ2GOMetdBHv1OKVZrSxIk3X0fyHtMQEurnCOU2tlSXn3pQ4t1VV80W7JKl_SAhdzH'];
-    
-//         // console.log(tokens);
-    
-//         // var str = eventSnapshot.message;
-//         // console.log(eventSnapshot.from);
-    
-//         var payload = {
-//             data: {
-//                 title: "Reminder about a task",
-//                 body: "Your due date for a task is coming up!"
-//             }
-//         };
-    
-//         // Send a message to devices subscribed to the provided topic.
-//         return messaging.sendToDevice(token_id, payload).then(function (response) {
-//                 // See the MessagingTopicResponse reference documentation for the
-//                 // contents of response.
-//                 console.log("Successfully sent message:", response);
-//                 return;
-//         })
-//         .catch(function (error) {
-//             console.log("Error sending message:", error);
-//         });
-    
-//     });
-// })
 
 exports.scheduledFunction = functions.pubsub.schedule('0 */3 * * *').onRun(async (context) => {
     const userSnapshot = await admin.database().ref('/Users').once('value');
 
-    var userIds = [];
-    var tokens = [];
     var currentDate = moment().add(3, 'hours');
     userSnapshot.forEach((user) => {
         const uid = user.key;
         const fcmToken = user.child('fcmToken').val();
         console.log('fcmToken: ' + fcmToken);
 
-        // userIds.push(uid);
-        // tokens.push(fcmToken.val());
         const goalsSnapshotPromise = admin.database().ref(`Users/${uid}/Goals`).once('value');
         goalsSnapshotPromise.then((goalsSnapshot) => {
             goalsSnapshot.forEach((goal) => {
@@ -108,7 +61,6 @@ exports.scheduledFunction = functions.pubsub.schedule('0 */3 * * *').onRun(async
                                         payload = {
                                             data: {
                                                 title: "You are late!",
-                                                // body: "Please notice that you are late!"
                                                 body: "Due date is coming up for goal " + `"` + goalName + `"` + ", okr goal " + `"` + okrGoalName + `"`
                                             },
                                             token: fcmToken
@@ -117,7 +69,6 @@ exports.scheduledFunction = functions.pubsub.schedule('0 */3 * * *').onRun(async
                                         payload = {
                                             data: {
                                                 title: "Your due date for a task is coming up!",
-                                                // body: "Due date is coming up!"
                                                 body: "Due date is coming up for goal " + `"` + goalName + `"` + ", okr goal " + `"` + okrGoalName + `"`
                                             },
                                             token: fcmToken
@@ -125,8 +76,6 @@ exports.scheduledFunction = functions.pubsub.schedule('0 */3 * * *').onRun(async
                                     }
                             
                                     messaging.send(payload).then(function (response) {
-                                        // See the MessagingTopicResponse reference documentation for the
-                                        // contents of response.
                                         console.log('sent message to this token: ' + fcmToken);
                                         console.log("Successfully sent message:", response);
                                         moment.defaultFormat = "YYYY/MM/DD HH/mm";
@@ -147,30 +96,6 @@ exports.scheduledFunction = functions.pubsub.schedule('0 */3 * * *').onRun(async
             });
         })        
         
-        // console.log('uid: ' + uid + ' fcmToken: ' + fcmToken.val());
     });
-
-    // for(let i = 0; i < userIds.length; i++) {
-        // var payload = {
-        //     data: {
-        //         title: userIds[i],
-        //         body: "Your due date for a task is coming up!"
-        //     }
-        // };
-
-        // messaging.sendToDevice(tokens[i], payload).then(function (response) {
-        //     // See the MessagingTopicResponse reference documentation for the
-        //     // contents of response.
-        //     console.log("Successfully sent message:", response);
-        //     return;
-        // })
-        // .catch(function (error) {
-        //     console.log("Error sending message:", error);
-        // });
-    // }
-    // return snapshot.then(result => {
-        
-    //     console.log(result.val());
-    // });
     return null;
 });
